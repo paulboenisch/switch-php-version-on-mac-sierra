@@ -33,31 +33,31 @@ if [ $? -eq 0 ]; then
   fi
 
   echo "PHP version [$newversion] found"
+  echo ""
   echo "Switching from [php${currentversion}] to [php${newversion}] ... "
-
+  echo ""
   printf "Unlink php${currentversion} ... "
   brew unlink php$currentversion 2> /dev/null > /dev/null
   printf "[OK] and "
 
   printf "Link php${newversion} ... "
-  brew link php$newversion 2> /dev/null > /dev/null
+  brew link --force php$newversion 2> /dev/null > /dev/null
   printf "[OK]\n"
 
   apache_http_conf_file=`httpd -V | grep -i server_config_file | cut -d '"' -f 2`
   printf "Updating Apache2.4 Configuration ${apache_http_conf_file} ... "
-
   # unload module of current version
-  sed -i -e "s/LoadModule php${majorOld}_module/#LoadModule php${majorOld}_module/g" $apache_http_conf_file
+  sed -i -e "s/LoadModule php${majorOld}_module \/usr\/local\/Cellar\/php${currentversion}/#LoadModule php${majorOld}_module \/usr\/local\/Cellar\/php${currentversion}/g" $apache_http_conf_file
 
   # unload module of old version
-  sed -i -e "s/#LoadModule php${majorNew}_module/LoadModule php${majorNew}_module/g" $apache_http_conf_file
+  sed -i -e "s/#LoadModule php${majorNew}_module \/usr\/local\/Cellar\/php${newversion}/LoadModule php${majorNew}_module \/usr\/local\/Cellar\/php${newversion}/g" $apache_http_conf_file
   printf "[OK]\n"
 
   # check Apache2 config
-  result="`apachectl configtest 2>&1`"
+  result="`sudo apachectl configtest 2>&1`"
   if [ "${result}" == "Syntax OK" ]; then
     printf "Restarting Apache2.4 ... "
-    sudo apachectl -k restart
+    sudo apachectl restart
     echo "[OK]"
     php -v
   else
@@ -70,5 +70,8 @@ else
   echo "Try \`brew install php${newversion}\` first."
   exit 1
 fi
+
+echo "Reading bash variables..."
+source ~/.bash_profile
 
 echo "DONE!"
